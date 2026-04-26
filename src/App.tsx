@@ -265,7 +265,16 @@ export function App() {
     window.location.reload(); // Simple restart for framework
   };
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#1a120b] text-[#e8d5b5] font-sans select-none">
+    <div 
+      className="relative w-full h-screen overflow-hidden text-[#e8d5b5] font-sans select-none"
+      style={{
+        backgroundImage: 'url(/background-v2.png.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#1a120b'
+      }}
+    >
       {/* 3D Canvas Layer */}
       <GameCanvas callbacks={callbacks} engineRef={engineRef} />
 

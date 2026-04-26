@@ -50,6 +50,38 @@ export class GameEngine {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    
+    // Handle WebGL context loss on alt-tab
+    canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      console.log('WebGL context lost');
+    }, false);
+    
+    canvas.addEventListener('webglcontextrestored', () => {
+      console.log('WebGL context restored');
+      // Force a re-render when context is restored
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      // Restart the game loop if it was stopped
+      if (this.state === 'PLAYING' || this.state === 'WAVE_CLEAR') {
+        this.loop();
+      }
+    }, false);
+    
+    // Handle page visibility (alt-tab)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Tab is hidden, pause the game loop
+        cancelAnimationFrame(this.animationFrameId);
+        console.log('Game paused (tab hidden)');
+      } else {
+        // Tab is visible again, resume the game loop
+        if (this.state === 'PLAYING' || this.state === 'WAVE_CLEAR') {
+          this.clock.getDelta(); // Reset delta to prevent large time jump
+          this.loop();
+          console.log('Game resumed (tab visible)');
+        }
+      }
+    });
 
     this.clock = new THREE.Clock();
     this.input = new InputManager(canvas);
@@ -77,27 +109,55 @@ export class GameEngine {
     this.scene.add(dirLight);
 
     // Arena Platform
-    const geometry = new THREE.CylinderGeometry(45, 45, 2, 32);
+    const geometry = new THREE.PlaneGeometry(100, 100);
+    
+    // Create ground texture
+    const groundCanvas = document.createElement('canvas');
+    groundCanvas.width = 512;
+    groundCanvas.height = 512;
+    const groundCtx = groundCanvas.getContext('2d');
+    
+    // Base ground color
+    groundCtx.fillStyle = '#3d2914';
+    groundCtx.fillRect(0, 0, 512, 512);
+    
+    // Add noise/texture
+    for (let i = 0; i < 5000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const size = Math.random() * 3 + 1;
+      groundCtx.fillStyle = Math.random() > 0.5 ? '#4a3520' : '#2d1f0f';
+      groundCtx.fillRect(x, y, size, size);
+    }
+    
+    const groundTexture = new THREE.CanvasTexture(groundCanvas);
+    groundTexture.wrapS = THREE.RepeatWrapping;
+    groundTexture.wrapT = THREE.RepeatWrapping;
+    groundTexture.repeat.set(2, 2);
+    
     const material = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      roughness: 0.8,
-      metalness: 0.2
+      map: groundTexture,
+      side: THREE.DoubleSide,
+      roughness: 0.9,
+      metalness: 0.1
     });
     const platform = new THREE.Mesh(geometry, material);
-    platform.position.y = -1;
+    platform.rotation.x = -Math.PI / 2;
+    platform.position.y = -0.5;
     this.scene.add(platform);
 
-    // Glowing Edge (simple torus glow)
-    const edgeGeo = new THREE.TorusGeometry(45, 0.5, 16, 64);
-    const edgeMat = new THREE.MeshBasicMaterial({
-      color: 0x0ea5e9,
-      transparent: true,
-      opacity: 0.7,
-      blending: THREE.AdditiveBlending,
-      depthTest: true
+    // Glowing Edge with magical circle pattern
+    const edgeGeo = new THREE.TorusGeometry(45, 2.5, 16, 64);
+    
+    const edgeMat = new THREE.MeshStandardMaterial({
+      map: groundTexture,
+      side: THREE.DoubleSide,
+      roughness: 0.9,
+      metalness: 0.1
     });
     const edge = new THREE.Mesh(edgeGeo, edgeMat);
     edge.rotation.x = Math.PI / 2;
+    edge.scale.set(1.1, 1, 1.1); // Scale to fit square arena
     this.scene.add(edge);
   }
 
