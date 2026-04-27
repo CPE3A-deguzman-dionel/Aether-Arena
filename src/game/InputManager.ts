@@ -5,6 +5,7 @@ export class InputManager {
   public mousePos: THREE.Vector2 = new THREE.Vector2();
   public isMouseDown: boolean = false;
   public isRightMouseDown: boolean = false;
+  public consumableKeys: number[] = []; // Track consumable key presses (1, 2, 3)
   private canvas: HTMLCanvasElement;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -19,10 +20,27 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent) => {
     this.keys[e.code] = true;
+
+    // Handle consumable hotkeys (1, 2, 3)
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      const slotIndex = parseInt(e.key) - 1;
+      if (!this.consumableKeys.includes(slotIndex)) {
+        this.consumableKeys.push(slotIndex);
+      }
+    }
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
     this.keys[e.code] = false;
+
+    // Handle consumable hotkeys (1, 2, 3)
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      const slotIndex = parseInt(e.key) - 1;
+      const idx = this.consumableKeys.indexOf(slotIndex);
+      if (idx !== -1) {
+        this.consumableKeys.splice(idx, 1);
+      }
+    }
   };
 
   private onMouseMove = (e: MouseEvent) => {
@@ -52,5 +70,13 @@ export class InputManager {
     this.canvas.removeEventListener('mousedown', this.onMouseDown);
     window.removeEventListener('mouseup', this.onMouseUp);
     this.canvas.removeEventListener('contextmenu', this.onContextMenu);
+  }
+
+  public reset() {
+    this.keys = {};
+    this.mousePos = new (THREE as any).Vector2();
+    this.isMouseDown = false;
+    this.isRightMouseDown = false;
+    this.consumableKeys = [];
   }
 }

@@ -8,7 +8,9 @@ import {
   Target,
   Skull,
   MousePointer2,
-  Swords } from
+  Crosshair,
+  Keyboard,
+  Pause } from
 'lucide-react';
 interface HUDProps {
   stats: PlayerStats;
@@ -22,6 +24,9 @@ interface HUDProps {
     maxHp: number;
   } | null;
   showWave?: boolean;
+  onUseConsumable?: (slotIndex: number) => void;
+  consumableCooldowns?: number[];
+  onPause?: () => void;
 }
 export const HUD: React.FC<HUDProps> = ({
   stats,
@@ -30,66 +35,20 @@ export const HUD: React.FC<HUDProps> = ({
   meleeWeapon,
   energyRatio,
   bossInfo,
-  showWave = true
+  showWave = true,
+  onUseConsumable,
+  consumableCooldowns = [0, 0, 0],
+  onPause
 }) => {
   const hpPercent = stats.hp / stats.maxHp * 100;
   const expPercent = stats.exp / stats.maxExp * 100;
   return (
     <div className="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between z-10">
-      {/* Top Bar */}
-      <div className="flex justify-between items-start">
-        {/* Health & Stats */}
-        <div className="flex flex-col gap-2 w-64">
-          <div className="bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg p-3 backdrop-blur-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-            <div className="flex justify-between items-center mb-1">
-              <div className="flex items-center gap-2 text-red-500 font-bold font-cinzel">
-                <Heart size={18} fill="currentColor" />
-                {Math.ceil(stats.hp)} / {stats.maxHp}
-              </div>
-            </div>
-            <div className="h-4 bg-[#1a120b] rounded-full overflow-hidden border border-[#3a2210]">
-              <div
-                className="h-full bg-gradient-to-r from-red-800 to-red-500 transition-all duration-200"
-                style={{
-                  width: `${Math.max(0, hpPercent)}%`
-                }} />
-            </div>
-
-            <div className="flex justify-between mt-3 text-xs text-[#d4af37] font-bold">
-              <div className="flex items-center gap-1" title="Attack">
-                <Target size={12} /> {stats.atk}
-              </div>
-              <div className="flex items-center gap-1" title="Defense">
-                <Shield size={12} /> {stats.def}
-              </div>
-              <div className="flex items-center gap-1" title="Speed">
-                <Zap size={12} /> {stats.spd}
-              </div>
-            </div>
-          </div>
-
-          {/* Level & EXP (moved below HP) */}
-          <div className="bg-[#2a1b10]/75 border-2 border-[#5c3a21]/60 rounded-lg p-2 backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.4)] mt-0">
-            <div className="flex items-center gap-3">
-              <div className="bg-[#d4af37] text-[#1a120b] font-bold rounded-full w-8 h-8 flex items-center justify-center shrink-0 font-cinzel">
-                {stats.level}
-              </div>
-              <div className="w-full">
-                <div className="h-2 bg-[#1a120b] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#8b6b22] to-[#d4af37] transition-all duration-200"
-                    style={{ width: `${expPercent}%` }} />
-                </div>
-                <div className="text-xs text-[#d4af37] font-bold mt-1">EXP</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Center: Boss Bar or Wave */}
-        <div className="flex flex-col items-center w-96">
+      {/* Wave/Boss Name - Absolute Centered */}
+      {showWave !== false && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2">
           {bossInfo ? (
-            <div className="w-full bg-[#2a1b10]/90 border-2 border-red-900/50 rounded-lg p-3 backdrop-blur-sm shadow-[0_0_20px_rgba(220,38,38,0.3)]">
+            <div className="w-96 bg-[#2a1b10]/90 border-2 border-red-900/50 rounded-lg p-3 backdrop-blur-sm shadow-[0_0_20px_rgba(220,38,38,0.3)]">
               <div className="flex justify-center items-center gap-2 mb-2">
                 <Skull className="text-red-500" size={18} />
                 <span className="text-red-500 font-cinzel font-bold tracking-widest text-lg">
@@ -104,12 +63,122 @@ export const HUD: React.FC<HUDProps> = ({
               </div>
             </div>
           ) : (
-            showWave !== false && (
-              <div className="text-[#d4af37] font-cinzel font-bold text-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                WAVE {wave}
-              </div>
-            )
+            <div className="text-[#d4af37] font-cinzel font-bold text-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              WAVE {wave}
+            </div>
           )}
+        </div>
+      )}
+
+      {/* Top Bar */}
+      <div className="flex justify-between items-start">
+        {/* Stacked Bars */}
+        <div className="flex flex-col gap-2 w-72">
+
+        {/* Pause Button */}
+        {onPause && (
+          <button
+            onClick={onPause}
+            className="pointer-events-auto p-3 bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg hover:border-[#d4af37] transition-colors"
+          >
+            <Pause size={24} className="text-[#e8d5b5]" />
+          </button>
+        )}
+          {/* Health Bar */}
+          <div className="bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg p-2 backdrop-blur-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-red-500 font-bold font-cinzel text-sm">
+                <Heart size={14} fill="currentColor" />
+                HP
+              </div>
+              <div className="flex items-center gap-2 text-xs text-[#00ff88] font-bold">
+                <Heart size={10} /> {stats.healthRegen}/s
+              </div>
+            </div>
+            <div className="h-3 bg-[#1a120b] rounded-full overflow-hidden border border-[#3a2210]">
+              <div
+                className="h-full bg-gradient-to-r from-red-800 to-red-500 transition-all duration-200"
+                style={{
+                  width: `${Math.max(0, hpPercent)}%`
+                }} />
+            </div>
+            <div className="text-xs text-red-400 font-bold mt-1 text-right">
+              {Math.ceil(stats.hp)} / {stats.maxHp}
+            </div>
+          </div>
+
+          {/* EXP Bar */}
+          <div className="bg-[#2a1b10]/75 border-2 border-[#5c3a21]/60 rounded-lg p-2 backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-[#d4af37] font-bold font-cinzel text-sm">
+                <div className="bg-[#d4af37] text-[#1a120b] font-bold rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                  {stats.level}
+                </div>
+                EXP
+              </div>
+            </div>
+            <div className="h-2 bg-[#1a120b] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#8b6b22] to-[#d4af37] transition-all duration-200"
+                style={{ width: `${expPercent}%` }} />
+            </div>
+            <div className="text-xs text-[#d4af37] font-bold mt-1 text-right">
+              {stats.exp} / {stats.maxExp}
+            </div>
+          </div>
+
+          {/* Energy Bar */}
+          <div className="bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg p-2 backdrop-blur-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2 text-[#00bfff] font-bold font-cinzel text-sm">
+                <Zap size={14} />
+                ENERGY
+              </div>
+              <div className="flex items-center gap-2 text-xs text-[#00bfff] font-bold">
+                <Zap size={10} /> {stats.energyRegen}/s
+              </div>
+            </div>
+            <div className="h-3 bg-[#1a120b] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-100"
+                style={{
+                  width: `${Math.max(0, energyRatio * 100)}%`
+                }} />
+            </div>
+            <div className="text-xs text-[#00bfff] font-bold mt-1 text-right">
+              {Math.ceil(stats.energy)} / {stats.maxEnergy}
+            </div>
+          </div>
+
+          {/* Other Attributes */}
+          <div className="bg-[#2a1b10]/75 border-2 border-[#5c3a21]/60 rounded-lg p-2 backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              <div className="flex items-center justify-center gap-1 text-[#8b7355] font-bold">
+                <Target size={10} /> ATK
+              </div>
+              <div className="flex items-center justify-center gap-1 text-[#8b7355] font-bold">
+                <Shield size={10} /> DEF
+              </div>
+              <div className="flex items-center justify-center gap-1 text-[#8b7355] font-bold">
+                <Zap size={10} /> SPD
+              </div>
+              <div className="flex items-center justify-center gap-1 text-[#8b7355] font-bold">
+                <Crosshair size={10} /> CRIT
+              </div>
+              <div className="flex items-center justify-center text-[#d4af37] font-bold">
+                {stats.atk}
+              </div>
+              <div className="flex items-center justify-center text-[#d4af37] font-bold">
+                {stats.def}
+              </div>
+              <div className="flex items-center justify-center text-[#d4af37] font-bold">
+                {stats.spd}
+              </div>
+              <div className="flex items-center justify-center text-[#d4af37] font-bold">
+                {stats.crit}%
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Gold */}
@@ -123,26 +192,38 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Bottom Bar */}
       <div className="flex justify-between items-end">
-        {/* Energy Bar */}
-        <div className="bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg p-3 backdrop-blur-sm flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-          <div className="text-[#e8d5b5] font-bold text-sm flex items-center gap-2">
-            <Zap className="text-[#00bfff]" size={16} />
-            ENERGY
-          </div>
-          <div className="w-32 h-3 bg-[#1a120b] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-100"
-              style={{
-                width: `${Math.max(0, energyRatio * 100)}%`
-              }} />
-          </div>
-          <div className="text-xs text-[#00bfff] font-bold">
-            {Math.ceil(stats.energy)}/{stats.maxEnergy}
-          </div>
+        {/* Consumables (above weapons) */}
+        <div className="flex gap-3 mb-2">
+          {stats.consumableSlots.map((slot, index) => (
+            <button
+              key={index}
+              onClick={() => onUseConsumable?.(index)}
+              disabled={!slot.consumable || consumableCooldowns[index] > 0}
+              className={`relative bg-[#2a1b10]/90 border-2 rounded-lg p-2 backdrop-blur-sm flex items-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,0.5)] w-16 h-16 pointer-events-auto transition-all ${
+                slot.consumable && consumableCooldowns[index] <= 0
+                  ? 'border-[#5c3a21] hover:border-[#d4af37]'
+                  : 'border-[#5c3a21]/30 opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <div className="absolute top-1 left-1 text-xs text-[#d4af37] font-bold font-cinzel">
+                {index + 1}
+              </div>
+              <div className="text-2xl">
+                {slot.consumable ? slot.consumable.icon : '—'}
+              </div>
+              {slot.consumable && consumableCooldowns[index] > 0 && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded">
+                  <span className="text-white text-xs font-bold">
+                    {Math.ceil(consumableCooldowns[index])}s
+                  </span>
+                </div>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Weapons (compact, dash/melee style) */}
-        <div className="flex gap-3 items-end">
+        <div className="flex gap-6 items-end">
           {meleeWeapon && (
             <div
               className="bg-[#2a1b10]/90 border-2 rounded-lg p-2 backdrop-blur-sm flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.5)] w-44"
@@ -154,10 +235,22 @@ export const HUD: React.FC<HUDProps> = ({
                 <div className="font-cinzel font-bold text-sm" style={{ color: meleeWeapon.color }}>
                   {meleeWeapon.name}
                 </div>
-                <div className="text-xs text-[#d4af37]">{meleeWeapon.damage} dmg • {meleeWeapon.attackSpeed}/s</div>
+                <div className="text-xs text-[#d4af37]">15⚡</div>
               </div>
             </div>
           )}
+
+          <div className="bg-[#2a1b10]/90 border-2 border-[#d4af37] rounded-lg p-2 backdrop-blur-sm flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.5)] w-36">
+            <div className="flex flex-col leading-tight">
+              <div className="flex items-center gap-2 text-xs text-[#e8d5b5]/70 font-bold">
+                <Keyboard size={12} className="text-[#d4af37]" /> Space
+              </div>
+              <div className="font-cinzel font-bold text-sm text-[#d4af37]">
+                Dash
+              </div>
+              <div className="text-xs text-[#d4af37]">25⚡</div>
+            </div>
+          </div>
 
           {weapon && (
             <div
@@ -170,7 +263,7 @@ export const HUD: React.FC<HUDProps> = ({
                 <div className="font-cinzel font-bold text-sm" style={{ color: weapon.color }}>
                   {weapon.name}
                 </div>
-                <div className="text-xs text-[#d4af37]">{weapon.damage} dmg • {weapon.fireRate}/s</div>
+                <div className="text-xs text-[#d4af37]">2⚡</div>
               </div>
             </div>
           )}

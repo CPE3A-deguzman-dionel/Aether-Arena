@@ -29,15 +29,20 @@ export class WaveManager {
       this.isBossWave = true;
     } else {
         // Generate wave composition (scaled by difficulty multiplier)
-        const baseSlimes = 5 + Math.floor(wave * 1.5);
-        const baseMages = wave >= 2 ? Math.floor(wave * 1.2) : 0;
+        // Reduce slime spawning after wave 5 (after boss phase 3)
+        const baseSlimes = wave >= 5 ? 3 + Math.floor(wave * 0.5) : 5 + Math.floor(wave * 1.5);
+        const baseMages = wave >= 2 ? Math.floor(wave * 0.4) : 0; // Reduced from 1.2 to 0.4
         const baseGolems = wave >= 3 ? Math.floor(wave * 0.5) : 0;
         const baseBombers = wave >= 2 ? Math.floor(wave * 0.2) : 0;
+        const baseHealers = wave >= 4 ? Math.floor(wave * 0.25) : 0; // Increased from 0.15 to 0.25
+        const baseBards = wave >= 6 ? Math.floor(wave * 0.2) : 0;
 
         const numSlimes = Math.max(1, Math.ceil(baseSlimes * DIFFICULTY_ENEMY_COUNT_MULT));
         const numMages = Math.max(0, Math.ceil(baseMages * DIFFICULTY_ENEMY_COUNT_MULT));
         const numGolems = Math.max(0, Math.ceil(baseGolems * DIFFICULTY_ENEMY_COUNT_MULT));
         const numBombers = Math.max(0, Math.ceil(baseBombers * DIFFICULTY_ENEMY_COUNT_MULT));
+        const numHealers = Math.max(0, Math.ceil(baseHealers * DIFFICULTY_ENEMY_COUNT_MULT));
+        const numBards = Math.max(0, Math.ceil(baseBards * DIFFICULTY_ENEMY_COUNT_MULT));
 
       for (let i = 0; i < numSlimes; i++)
       this.enemiesRemainingToSpawn.push('Slime');
@@ -47,6 +52,10 @@ export class WaveManager {
       this.enemiesRemainingToSpawn.push('Golem');
       for (let i = 0; i < numBombers; i++)
       this.enemiesRemainingToSpawn.push('Bomber');
+      for (let i = 0; i < numHealers; i++)
+      this.enemiesRemainingToSpawn.push('Healer');
+      for (let i = 0; i < numBards; i++)
+      this.enemiesRemainingToSpawn.push('Bard');
 
       // Shuffle
       this.enemiesRemainingToSpawn.sort(() => Math.random() - 0.5);

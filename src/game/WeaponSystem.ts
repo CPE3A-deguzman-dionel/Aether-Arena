@@ -158,6 +158,10 @@ export const upgradeWeapon = (weapon: Weapon): Weapon => {
   return {
     ...weapon,
     level: weapon.level + 1,
-    damage: Math.floor(weapon.damage * 1.2)
+    damage: Math.floor(weapon.damage * 1.2),
+    fireRate: weapon.fireRate * 1.1,
+    projectileSpeed: weapon.projectileSpeed * 1.05,
+    spread: weapon.spread ? Math.max(0, weapon.spread * 0.9) : undefined, // Reduce spread slightly
+    knockback: weapon.knockback ? weapon.knockback * 1.1 : undefined
   };
 };

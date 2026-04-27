@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Weapon, MeleeWeapon, PlayerStats } from '../game/types';
+import { Weapon, MeleeWeapon, PlayerStats, Consumable } from '../game/types';
 import { WEAPONS, getUpgradeCost } from '../game/WeaponSystem';
 import { MELEE_WEAPONS, getMeleeUpgradeCost } from '../game/MeleeWeaponSystem';
+import { CONSUMABLES } from '../data/consumableData';
 import { Coins, ArrowUpCircle, ShoppingCart, X } from 'lucide-react';
 interface WeaponShopProps {
   stats: PlayerStats;
@@ -13,6 +14,7 @@ interface WeaponShopProps {
   onUpgrade: () => void;
   onUpgradeMelee: () => void;
   onContinue: () => void;
+  onBuyConsumable: (consumable: Consumable, slotIndex: number) => void;
 }
 export const WeaponShop: React.FC<WeaponShopProps> = ({
   stats,
@@ -22,9 +24,10 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
   onBuyMelee,
   onUpgrade,
   onUpgradeMelee,
-  onContinue
+  onContinue,
+  onBuyConsumable
 }) => {
-  const [activeTab, setActiveTab] = useState<'RANGED' | 'MELEE'>('RANGED');
+  const [activeTab, setActiveTab] = useState<'RANGED' | 'MELEE' | 'CONSUMABLES'>('RANGED');
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -114,7 +117,7 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
         style={{
           borderColor: isOwned ? weapon.color : '#1e293b'
         }}>
-        
+
         <div className="flex justify-between items-start mb-3">
           <div>
             <div
@@ -122,7 +125,7 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
               style={{
                 color: weapon.color
               }}>
-              
+
               {weapon.rarity.toUpperCase()}
             </div>
             <h4 className="text-md font-bold text-white leading-tight">
@@ -153,7 +156,7 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
           onClick={() => onBuyMelee(weapon)}
           disabled={!canBuy}
           className={`w-full py-2 rounded font-cinzel font-bold text-sm flex items-center justify-center gap-2 transition-colors border ${isOwned ? 'bg-[#1a120b] border-[#5c3a21] text-[#8b7355]' : canBuy ? 'bg-[#8b2500] hover:bg-[#a52a2a] border-[#d4af37] text-[#e8d5b5]' : 'bg-[#1a120b] border-[#5c3a21] text-[#5c3a21] cursor-not-allowed'}`}>
-          
+
           {isOwned ?
           'EQUIPPED' :
 
@@ -164,6 +167,64 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
         </button>
       </div>);
 
+  };
+
+  const renderConsumableCard = (consumable: Consumable, slotIndex: number) => {
+    const isEquipped = stats.consumableSlots[slotIndex]?.consumable?.id === consumable.id;
+    const canBuy = stats.gold >= consumable.cost && !isEquipped;
+    return (
+      <div
+        key={consumable.id}
+        className="bg-slate-950 border rounded-xl p-4 flex flex-col"
+        style={{
+          borderColor: isEquipped ? '#d4af37' : '#1e293b'
+        }}>
+
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="text-3xl mb-2">{consumable.icon}</div>
+            <h4 className="text-md font-bold text-white leading-tight">
+              {consumable.name}
+            </h4>
+          </div>
+          <div className="flex items-center gap-1 text-amber-400 font-bold text-sm">
+            <Coins size={14} /> {consumable.cost}
+          </div>
+        </div>
+
+        <div className="space-y-1 text-xs mb-3">
+          <div className="flex justify-between">
+            <span className="text-slate-500">Effect</span>
+            <span className="text-slate-300">{consumable.effect.toUpperCase()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">Value</span>
+            <span className="text-slate-300">{consumable.value}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">Cooldown</span>
+            <span className="text-slate-300">{consumable.cooldown}s</span>
+          </div>
+        </div>
+
+        <div className="text-[10px] text-slate-400 italic mb-4 flex-grow">
+          {consumable.description}
+        </div>
+
+        <button
+          onClick={() => onBuyConsumable(consumable, slotIndex)}
+          disabled={!canBuy}
+          className={`w-full py-2 rounded font-cinzel font-bold text-sm flex items-center justify-center gap-2 transition-colors border ${isEquipped ? 'bg-[#1a120b] border-[#5c3a21] text-[#8b7355]' : canBuy ? 'bg-[#8b2500] hover:bg-[#a52a2a] border-[#d4af37] text-[#e8d5b5]' : 'bg-[#1a120b] border-[#5c3a21] text-[#5c3a21] cursor-not-allowed'}`}>
+
+          {isEquipped ?
+          `SLOT ${slotIndex + 1}` :
+
+          <>
+              <ShoppingCart size={16} /> BUY
+            </>
+          }
+        </button>
+      </div>);
   };
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-[#1a120b]/90 backdrop-blur-md z-50 p-8">
@@ -214,15 +275,18 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
             <div className="flex gap-2 mb-4 border-b border-[#5c3a21] pb-2">
               <button
                 onClick={() => setActiveTab('RANGED')}
-                className={`flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors ${activeTab === 'RANGED' ? 'bg-[#2a1b10] text-[#d4af37] border border-[#d4af37]' : 'text-[#8b7355] hover:text-[#e8d5b5]'}`}>
-                
+                className={activeTab === 'RANGED' ? 'flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors bg-[#2a1b10] text-[#d4af37] border border-[#d4af37]' : 'flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors text-[#8b7355] hover:text-[#e8d5b5]'}>
                 RANGED
               </button>
               <button
                 onClick={() => setActiveTab('MELEE')}
-                className={`flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors ${activeTab === 'MELEE' ? 'bg-[#2a1b10] text-[#d4af37] border border-[#d4af37]' : 'text-[#8b7355] hover:text-[#e8d5b5]'}`}>
-                
+                className={activeTab === 'MELEE' ? 'flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors bg-[#2a1b10] text-[#d4af37] border border-[#d4af37]' : 'flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors text-[#8b7355] hover:text-[#e8d5b5]'}>
                 MELEE
+              </button>
+              <button
+                onClick={() => setActiveTab('CONSUMABLES')}
+                className={activeTab === 'CONSUMABLES' ? 'flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors bg-[#2a1b10] text-[#d4af37] border border-[#d4af37]' : 'flex-1 text-center font-cinzel font-bold tracking-widest text-sm py-2 rounded transition-colors text-[#8b7355] hover:text-[#e8d5b5]'}>
+                CONSUMABLES
               </button>
             </div>
 
@@ -233,14 +297,14 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
                 style={{
                   borderColor: currentWeapon.color
                 }}>
-                
+
                   <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/old-wall.png')]" />
                   <div
                   className="text-sm font-cinzel font-bold tracking-widest mb-3 relative z-10"
                   style={{
                     color: currentWeapon.color
                   }}>
-                  
+
                     {currentWeapon.rarity.toUpperCase()}
                   </div>
                   <h4 className="text-3xl font-cinzel font-bold text-[#e8d5b5] mb-2 relative z-10 drop-shadow-md">
@@ -286,7 +350,7 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
                 onClick={onUpgrade}
                 disabled={!canUpgrade}
                 className={`mt-6 w-full py-4 rounded font-cinzel font-bold text-lg flex items-center justify-center gap-3 transition-colors shrink-0 border-2 ${canUpgrade ? 'bg-[#8b2500] hover:bg-[#a52a2a] border-[#d4af37] text-[#e8d5b5] shadow-[0_4px_10px_rgba(0,0,0,0.5)]' : 'bg-[#1a120b] border-[#5c3a21] text-[#5c3a21] cursor-not-allowed'}`}>
-                
+
                   <ArrowUpCircle size={24} />
                   {currentWeapon.level >= 5 ?
                 'MAX LEVEL' :
@@ -294,20 +358,21 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
                 </button>
               </> :
 
+            activeTab === 'MELEE' ?
             <>
                 <div
                 className="flex-grow border-2 rounded-lg p-6 flex flex-col items-center justify-center text-center bg-[#2a1b10] relative overflow-hidden"
                 style={{
                   borderColor: currentMeleeWeapon.color
                 }}>
-                
+
                   <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/old-wall.png')]" />
                   <div
                   className="text-sm font-cinzel font-bold tracking-widest mb-3 relative z-10"
                   style={{
                     color: currentMeleeWeapon.color
                   }}>
-                  
+
                     {currentMeleeWeapon.rarity.toUpperCase()}
                   </div>
                   <h4 className="text-3xl font-cinzel font-bold text-[#e8d5b5] mb-2 relative z-10 drop-shadow-md">
@@ -353,12 +418,37 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
                 onClick={onUpgradeMelee}
                 disabled={!canUpgradeMelee}
                 className={`mt-6 w-full py-4 rounded font-cinzel font-bold text-lg flex items-center justify-center gap-3 transition-colors shrink-0 border-2 ${canUpgradeMelee ? 'bg-[#8b2500] hover:bg-[#a52a2a] border-[#d4af37] text-[#e8d5b5] shadow-[0_4px_10px_rgba(0,0,0,0.5)]' : 'bg-[#1a120b] border-[#5c3a21] text-[#5c3a21] cursor-not-allowed'}`}>
-                
+
                   <ArrowUpCircle size={24} />
                   {currentMeleeWeapon.level >= 5 ?
                 'MAX LEVEL' :
                 `UPGRADE (${meleeUpgradeCost} G)`}
                 </button>
+              </> :
+
+            <>
+                <div className="flex-grow border-2 rounded-lg p-6 flex flex-col items-center justify-center text-center bg-[#2a1b10] relative overflow-hidden border-[#d4af37]">
+                  <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/old-wall.png')]" />
+                  <h4 className="text-3xl font-cinzel font-bold text-[#e8d5b5] mb-6 relative z-10 drop-shadow-md">
+                    CONSUMABLES
+                  </h4>
+                  <div className="w-full space-y-4 relative z-10">
+                    {stats.consumableSlots.map((slot, index) => (
+                      <div key={index} className="bg-[#1a120b] rounded border border-[#5c3a21] p-4">
+                        <div className="text-[#d4af37] font-cinzel font-bold mb-2">SLOT {index + 1}</div>
+                        {slot.consumable ? (
+                          <div>
+                            <div className="text-4xl mb-2">{slot.consumable.icon}</div>
+                            <div className="text-white font-bold">{slot.consumable.name}</div>
+                            <div className="text-xs text-[#e8d5b5]/70 mt-1">{slot.consumable.description}</div>
+                          </div>
+                        ) : (
+                          <div className="text-[#5c3a21] italic">Empty</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </>
             }
           </div>
@@ -389,6 +479,7 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
                   </div>
                 </> :
 
+              activeTab === 'MELEE' ?
               <>
                   <div className="mb-8">
                     <h3 className="text-[#e8d5b5] font-cinzel font-bold tracking-widest text-xl mb-4 flex items-center gap-3 border-b-2 border-[#5c3a21] pb-2">
@@ -407,6 +498,18 @@ export const WeaponShop: React.FC<WeaponShopProps> = ({
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       {arcaneMelee.map(renderMeleeCard)}
+                    </div>
+                  </div>
+                </> :
+
+              <>
+                  <div>
+                    <h3 className="text-[#e8d5b5] font-cinzel font-bold tracking-widest text-xl mb-4 flex items-center gap-3 border-b-2 border-[#5c3a21] pb-2">
+                      <span className="text-[#d4af37]">🧪</span>
+                      CONSUMABLES
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      {CONSUMABLES.map((consumable, index) => renderConsumableCard(consumable, index))}
                     </div>
                   </div>
                 </>

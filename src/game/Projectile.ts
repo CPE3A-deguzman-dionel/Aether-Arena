@@ -26,7 +26,8 @@ export class Projectile {
   knockback: number = 0,
   chainCount: number = 0)
   {
-    const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+    // Use elongated capsule geometry for projectiles instead of sphere
+    const geometry = new THREE.CapsuleGeometry(0.15, 0.6, 4, 8);
     const material = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
@@ -34,6 +35,9 @@ export class Projectile {
     });
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.position.copy(position);
+
+    // Orient projectile to face direction of travel
+    this.mesh.lookAt(position.clone().add(direction));
 
     this.velocity = direction.normalize().multiplyScalar(speed);
     this.damage = damage;

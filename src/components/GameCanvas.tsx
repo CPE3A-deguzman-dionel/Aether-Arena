@@ -25,7 +25,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full block"
-      onContextMenu={(e) => e.preventDefault()} // Prevent right click menu
+      onContextMenu={(e) => e.preventDefault()}
+      onContextMenuCapture={(e) => e.preventDefault()}
     />);
 
 };

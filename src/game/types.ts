@@ -13,10 +13,13 @@ export type EnemyType =
 'Mage' |
 'Golem' |
 'Bomber' |
+'Healer' |
+'Bard' |
 'Boss_Golem' |
 'Boss_Void' |
-'Boss_Chimera';
-export type StatType = 'ATK' | 'DEF' | 'SPD' | 'HP' | 'CRIT';
+'Boss_Chimera' |
+'Boss_Golem_Block';
+export type StatType = 'ATK' | 'DEF' | 'SPD' | 'HP' | 'CRIT' | 'MAX_ENERGY' | 'ENERGY_REGEN' | 'HEALTH_REGEN';
 export type WeaponCategory = 'Physical' | 'Arcane';
 
 export interface PlayerStats {
@@ -33,6 +36,9 @@ export interface PlayerStats {
   statPoints: number;
   energy: number;
   maxEnergy: number;
+  energyRegen: number;
+  healthRegen: number;
+  consumableSlots: ConsumableSlot[];
 }
 
 export interface Weapon {
@@ -83,6 +89,22 @@ export interface BossInfo {
   name: string;
   hp: number;
   maxHp: number;
+}
+
+export interface Consumable {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  cooldown: number; // in seconds
+  icon: string;
+  effect: 'heal' | 'energy' | 'speed';
+  value: number; // heal amount, energy amount, or speed boost percentage
+}
+
+export interface ConsumableSlot {
+  consumable: Consumable | null;
+  lastUsed: number; // timestamp
 }
 
 export interface GameCallbacks {

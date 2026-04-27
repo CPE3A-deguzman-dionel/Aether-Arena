@@ -8,8 +8,8 @@ export const MELEE_WEAPONS: MeleeWeapon[] = [
   name: 'Runic Greatsword',
   category: 'Physical',
   rarity: 'Uncommon',
-  damage: 25,
-  attackSpeed: 1.2,
+  damage: 15,
+  attackSpeed: 1.0,
   range: 3.5,
   arcAngle: Math.PI, // 180 degrees
   level: 1,
@@ -24,8 +24,8 @@ export const MELEE_WEAPONS: MeleeWeapon[] = [
   name: 'Shadow Daggers',
   category: 'Physical',
   rarity: 'Rare',
-  damage: 12,
-  attackSpeed: 3.5,
+  damage: 8,
+  attackSpeed: 2.5,
   range: 1.8,
   arcAngle: Math.PI / 3, // 60 degrees
   level: 1,
@@ -39,8 +39,8 @@ export const MELEE_WEAPONS: MeleeWeapon[] = [
   name: "Titan's Warhammer",
   category: 'Physical',
   rarity: 'Epic',
-  damage: 45,
-  attackSpeed: 0.8,
+  damage: 25,
+  attackSpeed: 0.6,
   range: 2.8,
   arcAngle: Math.PI / 2, // 90 degrees
   level: 1,
@@ -58,8 +58,8 @@ export const MELEE_WEAPONS: MeleeWeapon[] = [
   name: 'Plasma Rapier',
   category: 'Arcane',
   rarity: 'Uncommon',
-  damage: 18,
-  attackSpeed: 2.5,
+  damage: 12,
+  attackSpeed: 2.0,
   range: 2.5,
   arcAngle: Math.PI / 4, // 45 degrees
   level: 1,
@@ -74,8 +74,8 @@ export const MELEE_WEAPONS: MeleeWeapon[] = [
   name: 'Astral Flail',
   category: 'Arcane',
   rarity: 'Rare',
-  damage: 22,
-  attackSpeed: 1.5,
+  damage: 15,
+  attackSpeed: 1.2,
   range: 4.5,
   arcAngle: Math.PI * 0.75, // 135 degrees
   level: 1,
@@ -90,8 +90,8 @@ export const MELEE_WEAPONS: MeleeWeapon[] = [
   name: 'Vampiric Scythe',
   category: 'Arcane',
   rarity: 'Epic',
-  damage: 30,
-  attackSpeed: 1.8,
+  damage: 20,
+  attackSpeed: 1.5,
   range: 3.8,
   arcAngle: Math.PI * 1.2, // 216 degrees
   level: 1,
@@ -117,6 +117,8 @@ export const upgradeMeleeWeapon = (weapon: MeleeWeapon): MeleeWeapon => {
   return {
     ...weapon,
     level: weapon.level + 1,
-    damage: Math.floor(weapon.damage * 1.2)
+    damage: Math.floor(weapon.damage * 1.2),
+    attackSpeed: weapon.attackSpeed * 1.1,
+    range: weapon.range * 1.05
   };
 };

@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { Player } from './Player';
 import { Enemy } from './Enemy';
+import { Boss } from './Boss';
 import { Projectile } from './Projectile';
 import { LootItem } from './LootSystem';
 import { WaveManager } from './WaveManager';
 import { InputManager } from './InputManager';
 import { GameCallbacks, GameState, EnemyType } from './types';
-import { DIFFICULTY_ENEMY_COUNT_MULT, WAVE_HEALTH_MULT } from './Balance';
+// const DIFFICULTY_ENEMY_COUNT_MULT = 1.0;
+import { WAVE_HEALTH_MULT } from './Balance';
 
 export class GameEngine {
   private scene: THREE.Scene;
@@ -31,12 +33,17 @@ export class GameEngine {
     0
   );
 
+  // Dev mode
+  public devMode: boolean = true;
+  public godMode: boolean = false;
+  public unlimitedEnergy: boolean = false;
+
   constructor(canvas: HTMLCanvasElement, callbacks: GameCallbacks) {
     this.callbacks = callbacks;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0f172a); // Dark slate
-    this.scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+    this.scene.background = new THREE.Color(0x1a0a2e); // Dark purple outside
+    this.scene.fog = new THREE.FogExp2(0x1a0a2e, 0.015);
 
     this.camera = new THREE.PerspectiveCamera(
       60,
@@ -86,6 +93,9 @@ export class GameEngine {
     this.clock = new THREE.Clock();
     this.input = new InputManager(canvas);
 
+    // Dev mode keyboard shortcuts
+    window.addEventListener('keydown', this.handleDevKeys);
+
     // Setup Arena
     this.setupArena();
 
@@ -97,6 +107,9 @@ export class GameEngine {
     this.callbacks.onPlayerUpdate(this.player.stats);
     this.callbacks.onWeaponUpdate(this.player.weapon);
     this.callbacks.onMeleeWeaponUpdate(this.player.meleeWeapon);
+
+    // Start the game loop
+    this.loop();
   }
 
   private setupArena() {
@@ -116,6 +129,8 @@ export class GameEngine {
     groundCanvas.width = 512;
     groundCanvas.height = 512;
     const groundCtx = groundCanvas.getContext('2d');
+    
+    if (!groundCtx) return;
     
     // Base ground color
     groundCtx.fillStyle = '#3d2914';
@@ -146,45 +161,85 @@ export class GameEngine {
     platform.position.y = -0.5;
     this.scene.add(platform);
 
-    // Square border walls
-    const edgeMat = new THREE.MeshStandardMaterial({
-      map: groundTexture,
-      side: THREE.DoubleSide,
-      roughness: 0.9,
-      metalness: 0.1
-    });
-    
-    const wallThickness = 2;
-    const wallHeight = 5;
+    // Visual border line (not physical walls)
     const arenaSize = 100;
-    
-    // Create 4 walls for square border
-    const walls = [
-      // Top wall
-      { pos: [0, wallHeight/2, -arenaSize/2 - wallThickness/2], size: [arenaSize + wallThickness*2, wallHeight, wallThickness] },
-      // Bottom wall
-      { pos: [0, wallHeight/2, arenaSize/2 + wallThickness/2], size: [arenaSize + wallThickness*2, wallHeight, wallThickness] },
-      // Left wall
-      { pos: [-arenaSize/2 - wallThickness/2, wallHeight/2, 0], size: [wallThickness, wallHeight, arenaSize] },
-      // Right wall
-      { pos: [arenaSize/2 + wallThickness/2, wallHeight/2, 0], size: [wallThickness, wallHeight, arenaSize] }
-    ];
-    
-    walls.forEach(wall => {
-      const wallGeo = new THREE.BoxGeometry(wall.size[0], wall.size[1], wall.size[2]);
-      const wallMesh = new THREE.Mesh(wallGeo, edgeMat);
-      wallMesh.position.set(wall.pos[0], wall.pos[1], wall.pos[2]);
-      this.scene.add(wallMesh);
-    });
+    const borderGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(arenaSize, 0.1, arenaSize));
+    const borderMaterial = new THREE.LineBasicMaterial({ color: 0xd4af37, linewidth: 2 });
+    const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+    border.position.y = -0.4;
+    this.scene.add(border);
   }
 
   public startGame() {
+    this.input.reset();
     this.state = 'PLAYING';
     this.callbacks.onStateChange('PLAYING');
     this.waveManager.startWave(1);
     this.callbacks.onWaveUpdate(1);
     this.clock.start();
-    this.loop();
+  }
+
+  // Dev mode methods
+  private handleDevKeys = (e: KeyboardEvent) => {
+    // Only activate dev keys if dev mode is enabled and Shift is held
+    if (!this.devMode || !e.shiftKey) return;
+
+    switch (e.code) {
+      case 'KeyG':
+        this.toggleGodMode();
+        console.log('God Mode:', this.godMode);
+        break;
+      case 'KeyU':
+        this.toggleUnlimitedEnergy();
+        console.log('Unlimited Energy:', this.unlimitedEnergy);
+        break;
+      case 'KeyR':
+        this.removeAllEntities();
+        console.log('Removed all entities');
+        break;
+      case 'Digit1':
+        this.spawnBoss('Boss_Golem');
+        console.log('Spawned Golem Boss');
+        break;
+      case 'Digit2':
+        this.spawnBoss('Boss_Void');
+        console.log('Spawned Void Boss');
+        break;
+      case 'Digit3':
+        this.spawnBoss('Boss_Chimera');
+        console.log('Spawned Chimera Boss');
+        break;
+    }
+  };
+
+  public toggleGodMode() {
+    this.godMode = !this.godMode;
+  }
+
+  public toggleUnlimitedEnergy() {
+    this.unlimitedEnergy = !this.unlimitedEnergy;
+    this.player.unlimitedEnergy = this.unlimitedEnergy;
+    console.log('Unlimited Energy toggled to:', this.unlimitedEnergy);
+  }
+
+  public removeAllEntities() {
+    for (const enemy of this.enemies) {
+      this.scene.remove(enemy.mesh);
+    }
+    this.enemies = [];
+    for (const proj of this.projectiles) {
+      this.scene.remove(proj.mesh);
+    }
+    this.projectiles = [];
+    for (const loot of this.loot) {
+      this.scene.remove(loot.mesh);
+    }
+    this.loot = [];
+  }
+
+  public spawnBoss(bossType: EnemyType) {
+    const boss = new Boss(this.scene, bossType, new THREE.Vector3(0, 0, -20), 1);
+    this.enemies.push(boss);
   }
 
   public setState(newState: GameState) {
@@ -209,7 +264,7 @@ export class GameEngine {
       0,
       Math.sin(angle) * 30
     );
-    const waveMultiplier = Math.pow(WAVE_HEALTH_MULT, this.waveManager.currentWave - 1);
+    const waveMultiplier = this.waveManager.currentWave; // Linear scaling based on current wave
     let enemy: Enemy;
     if (type.startsWith('Boss_')) {
       enemy = new Boss(this.scene, type, pos, waveMultiplier);
@@ -256,13 +311,43 @@ export class GameEngine {
       this.input.keys['Space'] = false; // Prevent hold
     }
 
+    // Handle consumable hotkeys (1, 2, 3)
+    for (const slotIndex of this.input.consumableKeys) {
+      if (this.player.useConsumable(slotIndex)) {
+        this.callbacks.onPlayerUpdate(this.player.stats);
+      }
+    }
+    this.input.consumableKeys = []; // Clear processed keys
+
     // Mouse Look
     this.raycaster.setFromCamera(this.input.mousePos, this.camera);
     const target = new THREE.Vector3();
     this.raycaster.ray.intersectPlane(this.groundPlane, target);
 
+    // Check for Golem slow aura
+    let inGolemAura = false;
+    for (const enemy of this.enemies) {
+      if (enemy.type === 'Golem' && enemy.active) {
+        const distToPlayer = this.player.mesh.position.distanceTo(enemy.mesh.position);
+        if (distToPlayer < enemy.slowAuraRadius) {
+          inGolemAura = true;
+          break;
+        }
+      }
+      // Boss Golem Phase 2 and Phase 3 aura slow effect
+      if (enemy.type === 'Boss_Golem' && ((enemy as any).phase === 2 || (enemy as any).phase === 3) && enemy.active) {
+        const distToPlayer = this.player.mesh.position.distanceTo(enemy.mesh.position);
+        if (distToPlayer < 100) { // Aura covers entire map
+          inGolemAura = true;
+          break;
+        }
+      }
+    }
+    this.player.setSlowEffect(inGolemAura ? 0.5 : 0);
+
     this.player.update(dt, moveDir, target);
     this.callbacks.onEnergyUpdate(this.player.getEnergyRatio());
+    this.callbacks.onPlayerUpdate(this.player.stats);
 
     // Camera follow
     this.camera.position.x = THREE.MathUtils.lerp(
@@ -312,45 +397,41 @@ export class GameEngine {
         maxHp: activeBoss.maxHp
       });
 
-      // Boss Aura Buffs (15 units radius)
-      for (const enemy of this.enemies) {
-        if (enemy !== activeBoss && enemy.active) {
-          const dist = enemy.mesh.position.distanceTo(activeBoss.mesh.position);
-          if (dist <= 15) {
-            // Apply buff (visualized by red tint, actual stat boost handled here)
-            enemy.speed = 6; // Boosted speed
-            enemy.damage = 15; // Boosted damage
-            enemy.mesh.traverse((child: any) => {
-              if (child instanceof THREE.Mesh) {
-                const mat = child.material as THREE.MeshStandardMaterial;
-                if (!mat.emissive || mat.emissive.getHex() === 0x000000) {
-                  mat.color.lerp(new THREE.Color(0xff5555), 0.1);
-                }
-              }
-            });
-          }
+      // Boss Golem Phase 3: Spawn golems
+      if (activeBoss.type === 'Boss_Golem' && (activeBoss as any).shouldSpawnPhase3Golem) {
+        (activeBoss as any).shouldSpawnPhase3Golem = false;
+        const angle = Math.random() * Math.PI * 2;
+        const spawnPos = activeBoss.mesh.position.clone().add(new THREE.Vector3(Math.cos(angle) * 8, 0, Math.sin(angle) * 8));
+        const golem = new Enemy(
+          this.scene,
+          'Golem',
+          spawnPos,
+          1 // Use waveMultiplier = 1 for boss-spawned golems (no scaling)
+        );
+        this.enemies.push(golem);
+      }
+
+      // Boss Golem Phase 3: Spawn block enemies
+      if (activeBoss.type === 'Boss_Golem' && (activeBoss as any).shouldSpawnPhase3Blocks) {
+        (activeBoss as any).shouldSpawnPhase3Blocks = false;
+        for (let i = 0; i < 4; i++) {
+          const angle = i * Math.PI * 2 / 4;
+          const distance = 8;
+          const spawnPos = activeBoss.mesh.position.clone().add(new THREE.Vector3(Math.cos(angle) * distance, 0, Math.sin(angle) * distance));
+          const block = new Enemy(
+            this.scene,
+            'Boss_Golem_Block',
+            spawnPos,
+            this.waveManager.currentWave
+          );
+          (block as any).isBossBlock = true;
+          (block as any).bossRef = activeBoss;
+          (block as any).blockIndex = i;
+          this.scene.add(block.mesh);
+          this.enemies.push(block);
         }
       }
 
-      // Phase 3 Minion Spawning
-      const bossObj = activeBoss as any;
-      if (
-      bossObj.phase === 3 &&
-      Math.random() < 0.02 * dt * 60 &&
-      this.state === 'PLAYING')
-      {
-        const angle = Math.random() * Math.PI * 2;
-        const spawnPos = activeBoss.mesh.position.
-        clone().
-        add(new THREE.Vector3(Math.cos(angle) * 5, 0, Math.sin(angle) * 5));
-        const minion = new Enemy(
-          this.scene,
-          'Slime',
-          spawnPos,
-          this.waveManager.currentWave
-        );
-        this.enemies.push(minion);
-      }
     } else {
       this.callbacks.onBossUpdate(null);
     }
@@ -359,6 +440,45 @@ export class GameEngine {
       const enemy = this.enemies[i];
       enemy.update(dt, this.player.mesh.position, this.scene, this.projectiles);
       enemy.updateHPBar(this.camera);
+
+      // Healer logic: heal nearby allies
+      if (enemy.type === 'Healer' && enemy.active) {
+        const healRadius = 8;
+        const healAmount = 5 * dt;
+
+        for (const ally of this.enemies) {
+          if (ally !== enemy && ally.active && !ally.type.startsWith('Boss_')) {
+            const dist = ally.mesh.position.distanceTo(enemy.mesh.position);
+            if (dist < healRadius) {
+              // Heal ally
+              if (ally.hp < ally.maxHp) {
+                ally.hp = Math.min(ally.maxHp, ally.hp + healAmount);
+              }
+            }
+          }
+        }
+      }
+
+      // Bard logic: speed buff nearby allies
+      if (enemy.type === 'Bard' && enemy.active) {
+        const speedRadius = enemy.speedAuraRadius;
+        const speedBuff = 1.4; // 40% speed increase
+
+        for (const ally of this.enemies) {
+          if (ally !== enemy && ally.active && !ally.type.startsWith('Boss_')) {
+            const dist = ally.mesh.position.distanceTo(enemy.mesh.position);
+            if (dist < speedRadius) {
+              // Speed buff ally
+              ally.speed = ally.type === 'Slime' ? 4 * speedBuff :
+                          ally.type === 'Golem' ? 3 * speedBuff :
+                          ally.type === 'Bomber' ? 6 * speedBuff :
+                          ally.type === 'Mage' ? 3.5 * speedBuff :
+                          ally.type === 'Healer' ? 3 * speedBuff :
+                          ally.type === 'Bard' ? 4 * speedBuff : 3.5 * speedBuff;
+            }
+          }
+        }
+      }
 
       // Horizontal distance (ignore Y) for collision checks
       const dx = enemy.mesh.position.x - this.player.mesh.position.x;
@@ -369,7 +489,7 @@ export class GameEngine {
       if (enemy.type === 'Bomber') {
         const explodeRange = 2.0;
         if (horizDist < explodeRange) {
-          if (this.player.takeDamage(enemy.damage)) {
+          if (!this.godMode && this.player.takeDamage(enemy.damage)) {
             this.handleGameOver();
           }
           this.callbacks.onPlayerUpdate(this.player.stats);
@@ -381,7 +501,7 @@ export class GameEngine {
       // Regular melee enemies (Slime, Golem, Bomber handled above)
       if (!enemy.type.startsWith('Boss_') && enemy.type !== 'Mage') {
         if (horizDist < 1.5) {
-          if (this.player.takeDamage(enemy.damage)) {
+          if (!this.godMode && this.player.takeDamage(enemy.damage)) {
             this.handleGameOver();
           }
           this.callbacks.onPlayerUpdate(this.player.stats);
@@ -389,7 +509,7 @@ export class GameEngine {
       } else if (enemy.type.startsWith('Boss_')) {
         // Bosses have larger hitboxes
         if (horizDist < 3.0) {
-          if (this.player.takeDamage(enemy.damage)) {
+          if (!this.godMode && this.player.takeDamage(enemy.damage)) {
             this.handleGameOver();
           }
           this.callbacks.onPlayerUpdate(this.player.stats);
@@ -430,8 +550,15 @@ export class GameEngine {
         const pdz = proj.mesh.position.z - this.player.mesh.position.z;
         const pDist = Math.sqrt(pdx * pdx + pdz * pdz);
         if (pDist < 1.2) {
-          if (this.player.takeDamage(proj.damage)) {
+          if (!this.godMode && this.player.takeDamage(proj.damage)) {
             this.handleGameOver();
+          }
+          // Apply slow effect if projectile has slow_aura attribute (only if not in god mode)
+          if (!this.godMode && (proj as any).specialAttribute === 'slow_aura') {
+            this.player.setSlowEffect(0.5); // 50% slow for 3 seconds
+            setTimeout(() => {
+              this.player.setSlowEffect(0);
+            }, 3000);
           }
           this.callbacks.onPlayerUpdate(this.player.stats);
           proj.active = false;
@@ -442,11 +569,16 @@ export class GameEngine {
           const edz = proj.mesh.position.z - enemy.mesh.position.z;
           const eDist = Math.sqrt(edx * edx + edz * edz);
           if (eDist < 1.5) {
-              // Mages have a magical barrier: ignore player projectiles (only melee damages them)
+              // Mages have a magical barrier: absorb player projectiles and glow
               if (enemy.type === 'Mage' && !proj.reflected) {
-                // let normal player projectiles pass through mage barrier
+                // Trigger magic circle glow
+                (enemy as any).triggerMagicCircleGlow();
+                // Absorb projectile
+                proj.active = false;
                 continue;
               }
+
+
             // Apply special effects on hit
             if (
             proj.specialAttribute === 'spread_knockback' &&
@@ -473,6 +605,33 @@ export class GameEngine {
                   this.player.stats.maxHp,
                   this.player.stats.hp + 1
                 );
+                this.callbacks.onPlayerUpdate(this.player.stats);
+              }
+            }
+
+            // Boss Golem Block damage reflection (50%)
+            if (enemy.type === 'Boss_Golem_Block' && enemy.active) {
+              const reflectMultiplier = 0.5;
+              if (reflectMultiplier > 0) {
+                const reflectDamage = proj.damage * reflectMultiplier;
+                this.player.stats.hp -= reflectDamage;
+                this.callbacks.onPlayerUpdate(this.player.stats);
+              }
+            }
+
+            // Golem damage reflection
+            if (enemy.type === 'Golem' && enemy.active) {
+              const reflectDamage = proj.damage * 0.3; // 30% reflection
+              this.player.stats.hp -= reflectDamage;
+              this.callbacks.onPlayerUpdate(this.player.stats);
+            }
+
+            // Boss Golem damage reflection (50%)
+            if (enemy.type === 'Boss_Golem' && enemy.active) {
+              const reflectMultiplier = (enemy as any).getReflectDamageMultiplier ? (enemy as any).getReflectDamageMultiplier() : 0;
+              if (reflectMultiplier > 0) {
+                const reflectDamage = proj.damage * reflectMultiplier;
+                this.player.stats.hp -= reflectDamage;
                 this.callbacks.onPlayerUpdate(this.player.stats);
               }
             }
@@ -550,6 +709,14 @@ export class GameEngine {
     // Cleanup dead enemies
     this.enemies = this.enemies.filter((e) => {
       if (!e.active) {
+        // Check if this is a Boss Golem Block
+        if (e.type === 'Boss_Golem_Block' && (e as any).bossRef) {
+          const boss = (e as any).bossRef;
+          // Notify boss that a block was destroyed
+          if (boss.destroyBlock) {
+            boss.destroyBlock((e as any).blockIndex);
+          }
+        }
         e.destroy(this.scene);
         this.waveManager.activeEnemies = this.waveManager.activeEnemies.filter(
           (ae) => ae !== e
@@ -654,18 +821,33 @@ export class GameEngine {
         dirToEnemy.normalize();
         const angle = playerForward.angleTo(dirToEnemy);
 
-        if (angle <= this.player.meleeWeapon.arcAngle / 2) {
+        // Check if enemy is within the swing arc (left to right: -90° to +90°)
+        // Convert angle to signed value relative to player's right direction
+        const playerRight = new THREE.Vector3(1, 0, 0).applyQuaternion(this.player.mesh.quaternion).normalize();
+        const signedAngle = Math.atan2(dirToEnemy.dot(playerRight), dirToEnemy.dot(playerForward));
+
+        // Swing covers -90° to +90° (left to right)
+        if (signedAngle >= -Math.PI / 2 && signedAngle <= Math.PI / 2) {
           // Hit!
           let finalDmg = dmg;
 
-          // Backstab logic
+          // Apply damageckstab logic
           if (this.player.meleeWeapon.specialAttribute === 'backstab') {
             const enemyForward = new THREE.Vector3(0, 0, 1).
             applyQuaternion(enemy.mesh.quaternion).
             normalize();
             if (playerForward.dot(enemyForward) > 0.5) {
-              // Attacking from behind roughly
               finalDmg *= 2.5;
+            }
+          }
+
+          // Boss Golem damage reflection (50%)
+          if ((enemy.type === 'Boss_Golem' || enemy.type === 'Boss_Golem_Block') && enemy.active) {
+            const reflectMultiplier = 0.5;
+            if (reflectMultiplier > 0) {
+              const reflectDamage = finalDmg * reflectMultiplier;
+              this.player.stats.hp -= reflectDamage;
+              this.callbacks.onPlayerUpdate(this.player.stats);
             }
           }
 
@@ -690,22 +872,28 @@ export class GameEngine {
                 this.player.stats.hp + 1
               );
             }
+          }
+
+          // Golem damage reflection (applies even if enemy survives)
+          if (enemy.type === 'Golem' && enemy.active) {
+            const reflectDamage = finalDmg * 0.3; // 30% reflection
+            this.player.stats.hp -= reflectDamage;
             this.callbacks.onPlayerUpdate(this.player.stats);
-          } else {
-            // Apply knockback
-            if (this.player.meleeWeapon.knockback) {
-              enemy.applyKnockback(
-                this.player.meleeWeapon.knockback,
-                this.player.mesh.position
-              );
-            }
-            // Apply stun
-            if (
-            this.player.meleeWeapon.stunChance &&
-            Math.random() < this.player.meleeWeapon.stunChance)
-            {
-              enemy.freezeTimer = 1.0; // Reuse freeze timer for stun
-            }
+          }
+
+          // Apply knockback
+          if (this.player.meleeWeapon.knockback) {
+            enemy.applyKnockback(
+              this.player.meleeWeapon.knockback,
+              this.player.mesh.position
+            );
+          }
+          // Apply stun
+          if (
+          this.player.meleeWeapon.stunChance &&
+          Math.random() < this.player.meleeWeapon.stunChance)
+          {
+            enemy.freezeTimer = 1.0; // Reuse freeze timer for stun
           }
         }
       }
@@ -713,6 +901,11 @@ export class GameEngine {
   }
 
   private spawnLoot(pos: THREE.Vector3, type: string) {
+    // Skip loot for Boss Golem Blocks
+    if (type === 'Boss_Golem_Block') {
+      return;
+    }
+
     let expValue = 10;
     let goldValue = 5;
 
@@ -724,19 +917,8 @@ export class GameEngine {
         this.loot.push(new LootItem(this.scene, pos, 'EXP', expValue / 5));
         this.loot.push(new LootItem(this.scene, pos, 'GOLD', goldValue / 5));
       }
-      return;
-    }
-
-    if (type === 'Golem') {
-      expValue = 50;
-      goldValue = 30;
-    } else if (type === 'Mage') {
-      expValue = 20;
-      goldValue = 15;
-    }
-
-    this.loot.push(new LootItem(this.scene, pos, 'EXP', expValue));
-    if (Math.random() > 0.3) {
+    } else {
+      this.loot.push(new LootItem(this.scene, pos, 'EXP', expValue));
       this.loot.push(new LootItem(this.scene, pos, 'GOLD', goldValue));
     }
   }
