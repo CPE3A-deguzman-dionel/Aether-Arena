@@ -31,6 +31,8 @@ export interface PlayerStats {
   maxExp: number;
   gold: number;
   statPoints: number;
+  energy: number;
+  maxEnergy: number;
 }
 
 export interface Weapon {
@@ -89,7 +91,6 @@ export interface GameCallbacks {
   onWaveUpdate: (wave: number) => void;
   onWeaponUpdate: (weapon: Weapon) => void;
   onMeleeWeaponUpdate: (weapon: MeleeWeapon) => void;
-  onDashCooldown: (cooldownRatio: number) => void;
-  onMeleeCooldown: (cooldownRatio: number) => void;
+  onEnergyUpdate: (energyRatio: number) => void;
   onBossUpdate: (boss: BossInfo | null) => void;
 }

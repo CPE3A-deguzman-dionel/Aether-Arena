@@ -78,8 +78,7 @@ export function App() {
   const [wave, setWave] = useState<number>(1);
   const [weapon, setWeapon] = useState<Weapon | null>(null);
   const [meleeWeapon, setMeleeWeapon] = useState<MeleeWeapon | null>(null);
-  const [dashCooldown, setDashCooldown] = useState<number>(0);
-  const [meleeCooldown, setMeleeCooldown] = useState<number>(0);
+  const [energyRatio, setEnergyRatio] = useState<number>(1);
   const [showDevMode, setShowDevMode] = useState<boolean>(false);
   const [skillOptions, setSkillOptions] = useState<Skill[]>([]);
   const [bossInfo, setBossInfo] = useState<{
@@ -103,8 +102,7 @@ export function App() {
     setMeleeWeapon({
       ...newMeleeWeapon
     }),
-    onDashCooldown: (cd: number) => setDashCooldown(cd),
-    onMeleeCooldown: (cd: number) => setMeleeCooldown(cd),
+    onEnergyUpdate: (ratio: number) => setEnergyRatio(ratio),
     onBossUpdate: (
     boss: {
       name: string;
@@ -293,8 +291,7 @@ export function App() {
         wave={wave}
         weapon={weapon}
         meleeWeapon={meleeWeapon}
-        dashCooldownRatio={dashCooldown}
-        meleeCooldownRatio={meleeCooldown}
+        energyRatio={energyRatio}
         bossInfo={bossInfo}
         showWave={gameState !== 'WAVE_CLEAR'} />
 

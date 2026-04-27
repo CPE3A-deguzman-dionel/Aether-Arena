@@ -146,19 +146,36 @@ export class GameEngine {
     platform.position.y = -0.5;
     this.scene.add(platform);
 
-    // Glowing Edge with magical circle pattern
-    const edgeGeo = new THREE.TorusGeometry(45, 2.5, 16, 64);
-    
+    // Square border walls
     const edgeMat = new THREE.MeshStandardMaterial({
       map: groundTexture,
       side: THREE.DoubleSide,
       roughness: 0.9,
       metalness: 0.1
     });
-    const edge = new THREE.Mesh(edgeGeo, edgeMat);
-    edge.rotation.x = Math.PI / 2;
-    edge.scale.set(1.1, 1, 1.1); // Scale to fit square arena
-    this.scene.add(edge);
+    
+    const wallThickness = 2;
+    const wallHeight = 5;
+    const arenaSize = 100;
+    
+    // Create 4 walls for square border
+    const walls = [
+      // Top wall
+      { pos: [0, wallHeight/2, -arenaSize/2 - wallThickness/2], size: [arenaSize + wallThickness*2, wallHeight, wallThickness] },
+      // Bottom wall
+      { pos: [0, wallHeight/2, arenaSize/2 + wallThickness/2], size: [arenaSize + wallThickness*2, wallHeight, wallThickness] },
+      // Left wall
+      { pos: [-arenaSize/2 - wallThickness/2, wallHeight/2, 0], size: [wallThickness, wallHeight, arenaSize] },
+      // Right wall
+      { pos: [arenaSize/2 + wallThickness/2, wallHeight/2, 0], size: [wallThickness, wallHeight, arenaSize] }
+    ];
+    
+    walls.forEach(wall => {
+      const wallGeo = new THREE.BoxGeometry(wall.size[0], wall.size[1], wall.size[2]);
+      const wallMesh = new THREE.Mesh(wallGeo, edgeMat);
+      wallMesh.position.set(wall.pos[0], wall.pos[1], wall.pos[2]);
+      this.scene.add(wallMesh);
+    });
   }
 
   public startGame() {
@@ -245,8 +262,7 @@ export class GameEngine {
     this.raycaster.ray.intersectPlane(this.groundPlane, target);
 
     this.player.update(dt, moveDir, target);
-    this.callbacks.onDashCooldown(this.player.getDashCooldownRatio());
-    this.callbacks.onMeleeCooldown(this.player.getMeleeCooldownRatio());
+    this.callbacks.onEnergyUpdate(this.player.getEnergyRatio());
 
     // Camera follow
     this.camera.position.x = THREE.MathUtils.lerp(
@@ -269,7 +285,7 @@ export class GameEngine {
     if (
     this.input.isRightMouseDown &&
     (this.state === 'PLAYING' || this.state === 'WAVE_CLEAR') &&
-    this.player.meleeCooldown <= 0)
+    this.player.canUseMelee())
     {
       this.performMeleeAttack();
     }
@@ -556,7 +572,7 @@ export class GameEngine {
   }
 
   private performMeleeAttack() {
-    this.player.meleeCooldown = 1 / this.player.meleeWeapon.attackSpeed;
+    this.player.useMeleeEnergy();
     this.player.triggerMeleeVisual();
     this.player.meleeCombo++;
 

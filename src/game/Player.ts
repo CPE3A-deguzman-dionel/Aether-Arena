@@ -15,12 +15,12 @@ export class Player {
   public hasVampirism: boolean = false;
   public activeSkills: string[] = [];
 
-  private dashCooldown: number = 0;
   private dashDuration: number = 0;
   private iFrameDuration: number = 0;
   private shootCooldown: number = 0;
-  public meleeCooldown: number = 0;
-  private meleeMaxCooldown: number = 0;
+  private dashEnergyCost: number = 25;
+  private meleeEnergyCost: number = 15;
+  private energyRegenRate: number = 20; // energy per second
 
   public meleeKills: number = 0;
   public meleeCombo: number = 0;
@@ -113,7 +113,9 @@ export class Player {
       exp: 0,
       maxExp: 100,
       gold: 0,
-      statPoints: 0
+      statPoints: 0,
+      energy: 100,
+      maxEnergy: 100
     };
 
     // weapons were initialized earlier before creating the melee arc
@@ -194,9 +196,12 @@ export class Player {
     });
 
     // Timers
-    if (this.dashCooldown > 0) this.dashCooldown -= dt;
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
-    if (this.meleeCooldown > 0) this.meleeCooldown -= dt;
+    
+    // Energy regeneration
+    if (this.stats.energy < this.stats.maxEnergy) {
+      this.stats.energy = Math.min(this.stats.maxEnergy, this.stats.energy + this.energyRegenRate * dt);
+    }
 
     // Melee flash animation
     if (this.meleeFlashTimer > 0) {
@@ -269,16 +274,15 @@ export class Player {
     mat.opacity = 0.7;
     this.meleeFlashMesh.scale.setScalar(0.1);
     this.meleeFlashTimer = this.MELEE_FLASH_DURATION;
-    this.meleeMaxCooldown = 1 / this.meleeWeapon.attackSpeed;
   }
 
   public dash(moveDir: THREE.Vector3) {
-    if (this.dashCooldown <= 0) {
+    if (this.stats.energy >= this.dashEnergyCost) {
+      this.stats.energy -= this.dashEnergyCost;
       this.isDashing = true;
       this.isInvulnerable = true;
       this.dashDuration = 0.2;
       this.iFrameDuration = 0.3;
-      this.dashCooldown = 2.0;
       this.setTransparency(true, 0.3);
     }
   }
@@ -422,12 +426,15 @@ export class Player {
     }
   }
 
-  public getDashCooldownRatio(): number {
-    return Math.max(0, this.dashCooldown / 2.0);
+  public getEnergyRatio(): number {
+    return this.stats.energy / this.stats.maxEnergy;
   }
 
-  public getMeleeCooldownRatio(): number {
-    if (this.meleeMaxCooldown <= 0) return 0;
-    return Math.max(0, this.meleeCooldown / this.meleeMaxCooldown);
+  public canUseMelee(): boolean {
+    return this.stats.energy >= this.meleeEnergyCost;
+  }
+
+  public useMeleeEnergy(): void {
+    this.stats.energy -= this.meleeEnergyCost;
   }
 }

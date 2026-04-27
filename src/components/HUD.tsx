@@ -15,8 +15,7 @@ interface HUDProps {
   wave: number;
   weapon: Weapon | null;
   meleeWeapon?: MeleeWeapon | null;
-  dashCooldownRatio: number;
-  meleeCooldownRatio: number;
+  energyRatio: number;
   bossInfo?: {
     name: string;
     hp: number;
@@ -29,8 +28,7 @@ export const HUD: React.FC<HUDProps> = ({
   wave,
   weapon,
   meleeWeapon,
-  dashCooldownRatio,
-  meleeCooldownRatio,
+  energyRatio,
   bossInfo,
   showWave = true
 }) => {
@@ -125,40 +123,21 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Bottom Bar */}
       <div className="flex justify-between items-end">
-        {/* Dash & Melee Cooldowns */}
-        <div className="flex flex-col gap-2">
-          <div className="bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg p-3 backdrop-blur-sm flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-            <div className="text-[#e8d5b5] font-bold text-sm flex items-center gap-2">
-              <span className="px-2 py-1 bg-[#1a120b] rounded border border-[#5c3a21] text-xs text-[#d4af37]">
-                SPACE
-              </span>{' '}
-              DASH
-            </div>
-            <div className="w-24 h-2 bg-[#1a120b] rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-100 ${dashCooldownRatio === 0 ? 'bg-[#d4af37]' : 'bg-[#5c3a21]'}`}
-                style={{
-                  width: `${(1 - dashCooldownRatio) * 100}%`
-                }} />
-              
-            </div>
+        {/* Energy Bar */}
+        <div className="bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg p-3 backdrop-blur-sm flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+          <div className="text-[#e8d5b5] font-bold text-sm flex items-center gap-2">
+            <Zap className="text-[#00bfff]" size={16} />
+            ENERGY
           </div>
-
-          <div className="bg-[#2a1b10]/90 border-2 border-[#5c3a21] rounded-lg p-3 backdrop-blur-sm flex items-center gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-            <div className="text-[#e8d5b5] font-bold text-sm flex items-center gap-2">
-              <span className="px-2 py-1 bg-[#1a120b] rounded border border-[#5c3a21] text-xs text-[#d4af37]">
-                RMB
-              </span>{' '}
-              MELEE
-            </div>
-            <div className="w-24 h-2 bg-[#1a120b] rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-100 ${meleeCooldownRatio === 0 ? 'bg-[#c0392b]' : 'bg-[#5c3a21]'}`}
-                style={{
-                  width: `${(1 - meleeCooldownRatio) * 100}%`
-                }} />
-              
-            </div>
+          <div className="w-32 h-3 bg-[#1a120b] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-100"
+              style={{
+                width: `${Math.max(0, energyRatio * 100)}%`
+              }} />
+          </div>
+          <div className="text-xs text-[#00bfff] font-bold">
+            {Math.ceil(stats.energy)}/{stats.maxEnergy}
           </div>
         </div>
 
